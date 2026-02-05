@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Important Question</title>
+
+  <!-- Confetti library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root {
+      --bg1: #ffd6e7;
+      --bg2: #ffeef6;
+      --card: #ffffffcc;
+      --yes: #ff3b7a;
+      --yesHover: #ff1f68;
+      --polaroid-bg: #ffffff;
+      --polaroid-shadow: rgba(0,0,0,0.15);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100svh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at top, var(--bg2), var(--bg1));
+      font-family: system-ui, sans-serif;
+      overflow: hidden;
+      padding: 16px;
+    }
+
+    /* FULL-SCREEN CONFETTI CANVAS */
+    #confettiCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    .card {
+      width: min(720px, 92vw);
+      padding: 26px 22px;
+      background: var(--card);
+      backdrop-filter: blur(10px);
+      border-radius: 22px;
+      text-align: center;
+      box-shadow: 0 18px 60px rgba(0,0,0,.15);
+      transition: all 0.5s ease;
+    }
+
+    .art {
+      width: min(260px, 80vw);
+      margin: 0 auto 10px;
+      display: block;
+      filter: drop-shadow(0 10px 14px rgba(0,0,0,.12));
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    h1 {
+      font-size: clamp(26px, 4vw, 44px);
+      margin: 12px 0 18px;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .button-zone {
+      position: relative;
+      width: min(520px, 92%);
+      height: 150px;
+      margin: 0 auto;
+      touch-action: none;
+      transition: opacity 0.5s ease;
+    }
+
+    button {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      padding: 16px 24px;
+      font-size: 18px;
+      font-weight: 800;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(0,0,0,.14);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .12s ease, background .12s ease;
+    }
+
+    #yesBtn {
+      left: 18%;
+      background: var(--yes);
+      color: #fff;
+    }
+    #yesBtn:hover { background: var(--yesHover); }
+
+    #noBtn {
+      left: 62%;
+      background: #e5e7eb;
+      color: #111827;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                  opacity 0.3s ease,
+                  background 0.12s ease;
+    }
+    
+
+    .result {
+      display: none;
+      margin-top: 0;
+      animation: pop .35s ease;
+      width: 100%;
+    }
+
+    .result h2 {
+      font-size: clamp(30px, 4.5vw, 46px);
+      margin: 10px 0 30px;
+      text-align: center;
+      width: 100%;
+    }
+
+    /* POLAROID GRID STYLES */
+    .polaroid-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(2, auto);
+      gap: 25px;
+      margin: 20px auto;
+      max-width: 800px;
+    }
+
+    .polaroid-item {
+      background: var(--polaroid-bg);
+      padding: 15px 15px 40px 15px;
+      border-radius: 4px;
+      box-shadow: 0 8px 25px var(--polaroid-shadow);
+      transform: rotate(var(--rotate));
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .polaroid-item:hover {
+      transform: rotate(var(--rotate)) scale(1.05);
+      box-shadow: 0 12px 35px rgba(0,0,0,0.25);
+      z-index: 10;
+    }
+
+    .polaroid-item::after {
+      content: attr(data-caption);
+      position: absolute;
+      bottom: 15px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      color: #333;
+      padding: 0 10px;
+    }
+
+    .polaroid-item img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 2px;
+      display: block;
+    }
+
+    /* Individual polaroid rotations */
+    .polaroid-item:nth-child(1) { --rotate: -3deg; }
+    .polaroid-item:nth-child(2) { --rotate: 2deg; }
+    .polaroid-item:nth-child(3) { --rotate: -1deg; }
+    .polaroid-item:nth-child(4) { --rotate: 4deg; }
+    .polaroid-item:nth-child(5) { --rotate: -2deg; }
+    .polaroid-item:nth-child(6) { --rotate: 1deg; }
+    .polaroid-item:nth-child(7) { --rotate: -4deg; }
+    .polaroid-item:nth-child(8) { --rotate: 3deg; }
+
+    /* Shuffle animation */
+    @keyframes shuffleIn {
+      0% {
+        opacity: 0;
+        transform: rotate(var(--rotate)) translateY(30px);
+      }
+      100% {
+        opacity: 1;
+        transform: rotate(var(--rotate)) translateY(0);
+      }
+    }
+
+    .polaroid-item {
+      opacity: 0;
+      animation: shuffleIn 0.6s ease forwards;
+    }
+
+    /* Stagger the animations */
+    .polaroid-item:nth-child(1) { animation-delay: 0.1s; }
+    .polaroid-item:nth-child(2) { animation-delay: 0.2s; }
+    .polaroid-item:nth-child(3) { animation-delay: 0.3s; }
+    .polaroid-item:nth-child(4) { animation-delay: 0.4s; }
+    .polaroid-item:nth-child(5) { animation-delay: 0.5s; }
+    .polaroid-item:nth-child(6) { animation-delay: 0.6s; }
+    .polaroid-item:nth-child(7) { animation-delay: 0.7s; }
+    .polaroid-item:nth-child(8) { animation-delay: 0.8s; }
+
+    .shrinking {
+      animation: shrink 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    /* Fade out animation for question elements */
+    .fade-out {
+      opacity: 0 !important;
+      transform: translateY(-20px) !important;
+      pointer-events: none !important;
+    }
+
+    @keyframes shrink {
+      0% {
+        transform: scale(1) translateY(-50%);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(0.6) translateY(-50%);
+        opacity: 0.7;
+      }
+      100% {
+        transform: scale(0.5) translateY(-50%);
+        opacity: 0.5;
+      }
+    }
+
+    @keyframes pop {
+      from { transform: scale(.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .polaroid-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(4, auto);
+        gap: 20px;
+        max-width: 500px;
+      }
+      
+      .polaroid-item img {
+        height: 160px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .polaroid-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(8, auto);
+        gap: 15px;
+        max-width: 300px;
+      }
+      
+      .polaroid-item img {
+        height: 200px;
+      }
+      
+      .polaroid-item {
+        padding: 12px 12px 35px 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="confettiCanvas"></canvas>
+
+  <main class="card">
+    <!-- ANIMAL WITH HEART -->
+    <svg class="art" id="mainArt" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="fur" x1="0" x2="1">
+          <stop offset="0" stop-color="#fffff"/>
+          <stop offset="1" stop-color="#663300"/>
+        </linearGradient>
+        <linearGradient id="heart" x1="0" x2="1">
+          <stop offset="0" stop-color="#ff4d7d"/>
+          <stop offset="1" stop-color="#ff1f68"/>
+        </linearGradient>
+      </defs>
+
+      <path d="M250 50 C250 33 270 25 282 38
+               C294 25 314 33 314 50
+               C314 78 282 92 282 106
+               C282 92 250 78 250 50Z"
+            fill="url(#heart)"/>
+
+      <image height="300" width="300" href="ingrid.JPEG" />
+
+    </svg>
+
+    <h1 id="questionText">beth, will you be my valentine?</h1>
+
+    <section class="button-zone" id="zone">
+      <button id="yesBtn">Yes</button>
+      <button id="noBtn">No</button>
+    </section>
+
+    <section class="result" id="result">
+      <h2>YAY! 🎉 Our Memories</h2>
+      <div class="polaroid-grid" id="polaroidGrid">
+        <div class="polaroid-item" data-caption="Cat Lookalike">
+          <img class="cat_lookalike" src="cat_lookalike.JPEG"/>
+        </div>
+        <div class="polaroid-item" data-caption="Cuddly Cats">
+          <img class="cats" src="cats.JPEG"/>
+        </div>
+        <div class="polaroid-item" data-caption="Halloween Fun">
+          <img class="hallo_1" src="hallo_1.JPEG"/>
+        </div>
+        <div class="polaroid-item" data-caption="Hamster Buddy">
+          <img class="hamster" src="hamster.JPEG"/>
+        </div>
+        <div class="polaroid-item" data-caption="Beautiful Ingrid">
+          <img class="ingrid" src="ingrid.JPEG"/>
+        </div>
+        <div class="polaroid-item" data-caption="Special Moment">
+          <img class="point_five" src="point_five.JPEG"/>
+        </div>
+        <div class="polaroid-item" data-caption="Side Eye">
+          <img class="side_eye" src="side_eye.JPEG"/>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const zone = document.getElementById("zone");
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn = document.getElementById("noBtn");
+    const result = document.getElementById("result");
+    const mainArt = document.getElementById("mainArt");
+    const questionText = document.getElementById("questionText");
+    const polaroidGrid = document.getElementById("polaroidGrid");
+    const polaroidItems = document.querySelectorAll('.polaroid-item');
+
+    /* ---------- CONFETTI ---------- */
+    const confettiCanvas = document.getElementById("confettiCanvas");
+
+    function resizeConfettiCanvas() {
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      confettiCanvas.width = Math.floor(window.innerWidth * dpr);
+      confettiCanvas.height = Math.floor(window.innerHeight * dpr);
+      confettiCanvas.style.width = "100vw";
+      confettiCanvas.style.height = "100vh";
+    }
+
+    resizeConfettiCanvas();
+    window.addEventListener("resize", resizeConfettiCanvas);
+    window.addEventListener("orientationchange", () => setTimeout(resizeConfettiCanvas, 150));
+
+    const confettiInstance = confetti.create(confettiCanvas, {
+      resize: false,
+      useWorker: true
+    });
+
+    function fullScreenConfetti() {
+      const end = Date.now() + 1600;
+
+      (function frame() {
+        confettiInstance({
+          particleCount: 12,
+          spread: 90,
+          startVelocity: 45,
+          ticks: 180,
+          origin: { x: Math.random(), y: Math.random() * 0.3 }
+        });
+        if (Date.now() < end) requestAnimationFrame(frame);
+      })();
+
+      setTimeout(() => {
+        confettiInstance({
+          particleCount: 300,
+          spread: 140,
+          startVelocity: 60,
+          ticks: 220,
+          origin: { x: 0.5, y: 0.55 }
+        });
+      }, 300);
+    }
+
+    /* ---------- YES BUTTON GROWS ---------- */
+    let yesScale = 1;
+    function growYes() {
+      yesScale = Math.min(2.2, yesScale + 0.1);
+      yesBtn.style.transform = `translateY(-50%) scale(${yesScale})`;
+    }
+
+    /* ---------- RANDOMIZE POLAROID ROTATIONS ---------- */
+    function randomizePolaroidRotations() {
+      polaroidItems.forEach(item => {
+        // Random rotation between -8 and 8 degrees for a natural look
+        const randomRotation = (Math.random() * 16) - 8;
+        item.style.setProperty('--rotate', `${randomRotation}deg`);
+      });
+    }
+
+    /* ---------- SHUFFLE POLAROID POSITIONS ---------- */
+    function shufflePolaroids() {
+      const items = Array.from(polaroidItems);
+      
+      // Remove all items from grid
+      polaroidGrid.innerHTML = '';
+      
+      // Shuffle the array
+      for (let i = items.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [items[i], items[j]] = [items[j], items[i]];
+      }
+      
+      // Add them back in shuffled order
+      items.forEach(item => {
+        polaroidGrid.appendChild(item);
+      });
+      
+      // Add slight animation for the shuffle effect
+      items.forEach((item, index) => {
+        item.style.animationDelay = `${(index + 1) * 0.1}s`;
+      });
+    }
+
+    /* ---------- NEW: NO BUTTON SHRINKS ON CLICK ---------- */
+    let noBtnShrunk = false;
+    let shrinkCount = 0;
+    const maxShrinks = 3; // Maximum number of times the button can shrink
+
+    function shrinkNoButton() {
+      if (shrinkCount >= maxShrinks) return;
+      
+      shrinkCount++;
+      noBtnShrunk = true;
+      
+      // Add shrinking animation class
+      noBtn.classList.add('shrinking');
+      
+      // After animation completes, update the button text and reset for next click
+      setTimeout(() => {
+        noBtn.classList.remove('shrinking');
+        
+        // Update button text based on shrink count
+        switch(shrinkCount) {
+          case 1:
+            noBtn.textContent = "Are you sure?";
+            break;
+          case 2:
+            noBtn.textContent = "Really?";
+            break;
+          case 3:
+            noBtn.textContent = "Too small!";
+            // Make button unclickable after max shrinks
+            noBtn.style.pointerEvents = 'none';
+            break;
+        }
+        
+        // Allow shrinking again after a brief delay
+        setTimeout(() => {
+          noBtnShrunk = false;
+        }, 100);
+        
+        // Also grow the Yes button when No is clicked
+        growYes();
+      }, 500);
+    }
+
+    /* ---------- NO BUTTON RUNS AWAY ---------- */
+    function clamp(n, min, max) {
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function moveNo(px, py) {
+      const z = zone.getBoundingClientRect();
+      const b = noBtn.getBoundingClientRect();
+
+      let dx = (b.left + b.width / 2) - px;
+      let dy = (b.top + b.height / 2) - py;
+      let mag = Math.hypot(dx, dy) || 1;
+      dx /= mag;
+      dy /= mag;
+
+      let newLeft = (b.left - z.left) + dx * 150;
+      let newTop  = (b.top - z.top) + dy * 150;
+
+      newLeft = clamp(newLeft, 0, z.width - b.width);
+      newTop  = clamp(newTop, 0, z.height - b.height);
+
+      noBtn.style.left = newLeft + "px";
+      noBtn.style.top = newTop + "px";
+      noBtn.style.transform = "none";
+
+      growYes();
+    }
+
+    zone.addEventListener("pointermove", e => {
+      const b = noBtn.getBoundingClientRect();
+      const d = Math.hypot(
+        (b.left + b.width / 2) - e.clientX,
+        (b.top + b.height / 2) - e.clientY
+      );
+      if (d < 140) moveNo(e.clientX, e.clientY);
+    });
+
+    noBtn.addEventListener("click", e => e.preventDefault());
+
+    /* ---------- YES CLICK ---------- */
+    yesBtn.addEventListener("click", () => {
+      // Fade out the question image, text, and buttons
+      mainArt.classList.add('fade-out');
+      questionText.classList.add('fade-out');
+      zone.classList.add('fade-out');
+      
+      // Show the result after a short delay for the fade animation
+      setTimeout(() => {
+        result.style.display = "block";
+        resizeConfettiCanvas();
+        fullScreenConfetti();
+        
+        // Hide the question elements completely
+        mainArt.style.display = "none";
+        questionText.style.display = "none";
+        zone.style.display = "none";
+        
+        // Randomize polaroid rotations for a fun, natural look
+        randomizePolaroidRotations();
+        
+        // Shuffle the polaroids for variety
+        setTimeout(shufflePolaroids, 300);
+      }, 500);
+    });
+
+    /* ---------- POLAROID CLICK EFFECT ---------- */
+    polaroidItems.forEach(item => {
+      item.addEventListener('click', () => {
+        // Temporarily enlarge and center the clicked polaroid
+        item.style.transform = 'rotate(0deg) scale(1.8)';
+        item.style.zIndex = '100';
+        item.style.position = 'fixed';
+        item.style.top = '50%';
+        item.style.left = '50%';
+        item.style.transform = 'translate(-50%, -50%) scale(1.8)';
+        item.style.transition = 'all 0.4s ease';
+        
+        // Add overlay
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.backgroundColor = 'rgba(0,0,0,0.7)';
+        overlay.style.zIndex = '99';
+        overlay.style.backdropFilter = 'blur(5px)';
+        document.body.appendChild(overlay);
+        
+        // Click to close
+        function closeViewer() {
+          item.style = '';
+          overlay.remove();
+          overlay.removeEventListener('click', closeViewer);
+          item.removeEventListener('click', closeViewer);
+        }
+        
+        overlay.addEventListener('click', closeViewer);
+        item.addEventListener('click', closeViewer);
+      });
+    });
+  </script>
+</body>
+</html>
